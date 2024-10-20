@@ -109,7 +109,7 @@ pub fn spawn_ffmpeg(args: Args) {
         .and_then(|child| child.wait_with_output());
 }
 
-pub fn duration_to_secs<T: Display>(duration: T) -> f64 {
+fn duration_to_secs<T: Display>(duration: T) -> f64 {
     let split = duration
         .to_string()
         .split(':')
