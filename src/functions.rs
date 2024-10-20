@@ -5,7 +5,7 @@ pub fn spawn_ffmpeg(args: Args) {
     let mut ffmpeg_args = vec!["-i", &args.input];
     let mut filters = vec![];
 
-    // Ranges
+    // Segment ranges
     if args.segments.contains('-') {
         let segments = args
             .segments
@@ -19,7 +19,7 @@ pub fn spawn_ffmpeg(args: Args) {
                 .map(|(from, to)| (duration_to_secs(from), duration_to_secs(to)))
                 .unwrap_or_else(|| panic!("{}", "Invalid segment range!".error_text()));
 
-            let fade_to = if to < 1. { to } else { to - 1. };
+            let fade_to = to - 1.;
 
             // Video filters
             let mut video_filters = vec![format!("[0:v]trim={from}:{to}")];
