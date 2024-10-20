@@ -123,7 +123,7 @@ pub fn duration_to_secs<T: Display>(duration: T) -> f64 {
     match split.len() {
         1 => split[0],
         2 => (split[0] * 60.) + split[1],
-        3 => (split[0] * 3600.) + (split[1] * 60.) + split[1],
+        3 => (split[0] * 3600.) + (split[1] * 60.) + split[2],
         _ => 0.,
     }
 }
