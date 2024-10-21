@@ -1,4 +1,4 @@
-use crate::args::Args;
+use crate::{args::Args, error};
 use std::{fmt::Display, process::exit, process::Command};
 
 pub fn spawn_ffmpeg(args: Args) {
@@ -11,10 +11,7 @@ pub fn spawn_ffmpeg(args: Args) {
             let (from, to) = segment
                 .split_once('-')
                 .map(|(from, to)| (duration_to_secs(from), duration_to_secs(to)))
-                .unwrap_or_else(|| {
-                    print_error("A non-range value found inside a segment!");
-                    exit(1);
-                });
+                .unwrap_or_else(|| error!("A non-range value found inside a segment!"));
 
             let fade_to = to - (args.fade.unwrap_or(0.) + 0.5);
 
@@ -96,7 +93,7 @@ pub fn spawn_ffmpeg(args: Args) {
                     arg.to_string()
                 })
                 .collect::<Vec<String>>()
-                .join(" ")
+                .join(" "),
         );
     }
 
@@ -111,10 +108,9 @@ fn duration_to_secs<T: Display>(duration: T) -> f64 {
         .to_string()
         .split(':')
         .map(|entry| {
-            entry.parse::<f64>().unwrap_or_else(|_| {
-                print_error("Invalid segment duration found inside a range!");
-                exit(1);
-            })
+            entry
+                .parse::<f64>()
+                .unwrap_or_else(|_| error!("Invalid segment duration found inside a range!"))
         })
         .collect::<Vec<f64>>();
 
@@ -126,6 +122,10 @@ fn duration_to_secs<T: Display>(duration: T) -> f64 {
     }
 }
 
-fn print_error(message: &str) {
-    println!("\x1b[38;5;203m{message}\x1b[0m")
+#[macro_export]
+macro_rules! error {
+    ($message:expr) => {{
+        println!("\x1b[38;5;203m{}\x1b[0m", $message);
+        exit(1);
+    }};
 }

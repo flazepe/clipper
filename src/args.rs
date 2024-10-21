@@ -9,7 +9,7 @@ pub struct Args {
     pub input: String,
 
     /// The segment duration range to add (e.g. "--segment 2:00-2:30"). This option can be repeated to add more segments
-    #[arg(short, long = "segment", id = "DURATION RANGE")]
+    #[arg(short, long = "segment", id = "DURATION RANGE", required = true)]
     pub segments: Vec<String>,
 
     /// The CQ, if using NVENC
