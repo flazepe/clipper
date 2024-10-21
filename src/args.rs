@@ -5,33 +5,34 @@ use clap::Parser;
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// The input file
-    #[arg(short, long)]
+    #[arg(short, long, id = "INPUT PATH")]
     pub input: String,
 
-    /// The segment ranges (e.g. "2:00-2:30 9:20-9:30"). The space can be replaced by other supported delimiters. A simple duration like "1:25" can also be used to act as a skip (equivalent to ffmpeg's -ss option)
-    #[arg(short, long)]
-    pub segments: String,
+    /// The segment duration range to add (e.g. "--segment 2:00-2:30"). This option can be repeated to add more segments
+    #[arg(short, long = "segment", id = "DURATION RANGE")]
+    pub segments: Vec<String>,
 
-    /// The cq, if using NVENC
+    /// The CQ, if using NVENC
     #[arg(short, long)]
     pub cq: Option<String>,
 
     /// Whether to convert to HEVC/H.265 instead of AVC/H.264
-    #[arg(long, action)]
+    #[arg(short = 'e', long)]
     pub hevc: bool,
 
     /// Whether to mute the entire video
-    #[arg(short, long, action)]
+    #[arg(short, long)]
     pub mute: bool,
 
     /// Whether to fade between segments
-    #[arg(short, long, action)]
+    #[arg(short, long)]
     pub fade: bool,
 
     /// Whether to debug
-    #[arg(short, long, action)]
+    #[arg(short, long)]
     pub debug: bool,
 
     /// The output file
+    #[arg(id = "OUTPUT PATH")]
     pub output: String,
 }

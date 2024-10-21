@@ -6,14 +6,8 @@ pub fn spawn_ffmpeg(args: Args) {
     let mut filters = vec![];
 
     // Segment ranges
-    if args.segments.contains('-') {
-        let segments = args
-            .segments
-            .split([' ', ',', ';'])
-            .map(|segment| segment.to_string())
-            .collect::<Vec<String>>();
-
-        for (index, segment) in segments.iter().enumerate() {
+    if args.segments.iter().any(|segment| segment.contains('-')) {
+        for (index, segment) in args.segments.iter().enumerate() {
             let (from, to) = segment
                 .split_once('-')
                 .map(|(from, to)| (duration_to_secs(from), duration_to_secs(to)))
@@ -47,11 +41,11 @@ pub fn spawn_ffmpeg(args: Args) {
 
         filters.push(format!(
             "{}concat=n={}:v=1:a=1[v][a]",
-            (0..segments.len())
+            (0..args.segments.len())
                 .map(|index| format!("[v{index}][a{index}]"))
                 .collect::<Vec<String>>()
                 .join(""),
-            segments.len(),
+            args.segments.len(),
         ));
     }
 
@@ -59,7 +53,7 @@ pub fn spawn_ffmpeg(args: Args) {
     let filters = filters.join(";");
 
     if filters.is_empty() {
-        ffmpeg_args.extend_from_slice(&["-ss", &args.segments]);
+        ffmpeg_args.extend_from_slice(&["-ss", &args.segments[0]]);
     } else {
         ffmpeg_args.extend_from_slice(&["-filter_complex", &filters, "-map", "[v]", "-map", "[a]"]);
     }
