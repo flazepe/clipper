@@ -5,7 +5,7 @@ use clap::Parser;
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// The input file
-    #[arg(short, long, id = "INPUT PATH")]
+    #[arg(short, long)]
     pub input: String,
 
     /// The segment duration range to add (e.g. "--segment 2:00-2:30"). This option can be repeated to add more segments
@@ -33,6 +33,5 @@ pub struct Args {
     pub debug: bool,
 
     /// The output file
-    #[arg(id = "OUTPUT PATH")]
     pub output: String,
 }
