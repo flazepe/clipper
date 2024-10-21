@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{ArgAction, Parser};
 
 /// A simple ffmpeg wrapper for clipping videos
 #[derive(Parser, Debug)]
@@ -24,9 +24,9 @@ pub struct Args {
     #[arg(short, long)]
     pub mute: bool,
 
-    /// Whether to fade between segments
-    #[arg(short, long)]
-    pub fade: bool,
+    /// Whether to fade between segments. If set, this would be the fade duration in secs (default: 0.5)
+    #[arg(short, long, num_args = 0..=1, require_equals = true, default_missing_value = "0.5")]
+    pub fade: Option<f64>,
 
     /// Whether to debug
     #[arg(short, long)]

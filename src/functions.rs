@@ -16,24 +16,24 @@ pub fn spawn_ffmpeg(args: Args) {
                     exit(1);
                 });
 
-            let fade_to = to - 1.;
+            let fade_to = to - (args.fade.unwrap_or(0.) + 0.5);
 
             // Video filters
             let mut video_filters = vec![format!("[0:v]trim={from}:{to}")];
-            if args.fade {
+            if let Some(fade) = args.fade {
                 video_filters.extend_from_slice(&[
-                    format!("fade=t=in:st={from}:d=1"),
-                    format!("fade=t=out:st={fade_to}:d=1"),
+                    format!("fade=t=in:st={from}:d={fade}"),
+                    format!("fade=t=out:st={fade_to}:d={fade}"),
                 ]);
             }
             video_filters.push(format!("setpts=PTS-STARTPTS[v{index}]"));
 
             // Audio filters
             let mut audio_filters = vec![format!("[0:a]atrim={from}:{to}")];
-            if args.fade {
+            if let Some(fade) = args.fade {
                 audio_filters.extend_from_slice(&[
-                    format!("afade=t=in:st={from}:d=1"),
-                    format!("afade=t=out:st={fade_to}:d=1"),
+                    format!("afade=t=in:st={from}:d={fade}"),
+                    format!("afade=t=out:st={fade_to}:d={fade}"),
                 ]);
             }
             audio_filters.push(format!("asetpts=PTS-STARTPTS[a{index}]"));
