@@ -1,4 +1,4 @@
-use clap::{ArgAction, Parser};
+use clap::Parser;
 
 /// A simple ffmpeg wrapper for clipping videos
 #[derive(Parser, Debug)]
