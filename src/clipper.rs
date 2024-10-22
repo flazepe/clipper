@@ -1,6 +1,5 @@
 use crate::{args::Args, error};
-use std::fmt::Display;
-use std::process::Command;
+use std::{fmt::Display, process::Command};
 
 pub struct Clipper(Args);
 
