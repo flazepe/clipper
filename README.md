@@ -17,7 +17,7 @@ Combining multiple clips from multiple inputs
 clipper -i input1.mp4 -s 2:00-2:30 -s 5:12-5:20 -i input2.mp4 -s 1:15-1:25 -s 7:20-7:27 output.mp4
 ```
 
-Adding a fade transition between segments
+Adding a fade transition between segments with optional duration in seconds
 
 ```
 clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -fade output.mp4
