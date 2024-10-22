@@ -96,7 +96,7 @@ impl Args {
         }
 
         if cq.as_ref().map_or(false, |cq| cq.parse::<f64>().is_err()) {
-            error!("Invalid CQ value.");
+            error!(format!("Invalid CQ value: {}", cq.unwrap_or_default()));
         }
 
         if no_video && no_audio {
