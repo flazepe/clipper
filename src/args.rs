@@ -3,10 +3,10 @@ use std::env::args as env_args;
 
 /// A simple ffmpeg wrapper for clipping videos.
 pub struct Args {
-    /// The input files
+    /// The input file
     pub input: Vec<(String, Vec<String>)>,
 
-    /// Whether to fade between segments. If set (e.g. "-fade=1"), this would be the fade duration in secs (default: 0.5)
+    /// Whether to fade between segments. If set (e.g. "-fade=1"), this would be the fade duration in seconds (default: 0.5)
     pub fade: Option<f64>,
 
     /// The CQ, if using NVENC
