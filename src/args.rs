@@ -92,7 +92,7 @@ impl Args {
         }
 
         if let Some((input, _)) = input.iter().find(|input| input.1.is_empty()) {
-            error!(format!(r#"Input "{input}" has no segments!"#));
+            error!(format!(r#"Input "{input}" has no segments."#));
         }
 
         if cq.as_ref().map_or(false, |cq| cq.parse::<f64>().is_err()) {
