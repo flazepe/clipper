@@ -1,10 +1,9 @@
 mod args;
-mod functions;
+mod clipper;
 
 use args::Args;
-use clap::Parser;
-use functions::spawn_ffmpeg;
+use clipper::Clipper;
 
 fn main() {
-    spawn_ffmpeg(Args::parse());
+    Clipper::new(Args::parse()).run();
 }
