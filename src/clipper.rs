@@ -1,4 +1,4 @@
-use crate::{args::Args, error};
+use crate::{args::Args, error, string_vec};
 use std::{fmt::Display, process::Command};
 
 pub struct Clipper(Args);
@@ -45,7 +45,7 @@ impl Clipper {
         let mut segment_count = 0;
 
         for (input_index, (input, segments)) in self.0.input.iter().enumerate() {
-            args.extend_from_slice(&["-i".into(), input.into()]);
+            args.append(&mut string_vec!["-i", input]);
 
             for segment in segments {
                 let (from, to) = segment
@@ -104,14 +104,14 @@ impl Clipper {
             ));
         }
 
-        args.extend_from_slice(&["-filter_complex".into(), filters.join(";")]);
+        args.append(&mut string_vec!["-filter_complex", filters.join(";")]);
 
         if !self.0.no_video {
-            args.extend_from_slice(&["-map".into(), "[v]".into()]);
+            args.append(&mut string_vec!["-map", "[v]"]);
         }
 
         if !self.0.no_audio {
-            args.extend_from_slice(&["-map".into(), "[a]".into()]);
+            args.append(&mut string_vec!["-map", "[a]"]);
         }
 
         args
@@ -119,25 +119,18 @@ impl Clipper {
 
     fn generate_ffmpeg_encoder_args(&self) -> Vec<String> {
         if let Some(cq) = self.0.cq.as_ref() {
-            vec![
-                "-c:v".into(),
+            string_vec![
+                "-c:v",
                 if self.0.hevc {
-                    "hevc_nvenc".into()
+                    "hevc_nvenc"
                 } else {
-                    "h264_nvenc".into()
+                    "h264_nvenc"
                 },
-                "-cq".into(),
-                cq.into(),
+                "-cq",
+                cq,
             ]
         } else {
-            vec![
-                "-c:v".into(),
-                if self.0.hevc {
-                    "libx265".into()
-                } else {
-                    "libx264".into()
-                },
-            ]
+            string_vec!["-c:v", if self.0.hevc { "libx265" } else { "libx264" }]
         }
     }
 
@@ -159,6 +152,11 @@ impl Clipper {
             _ => 0.,
         }
     }
+}
+
+#[macro_export]
+macro_rules! string_vec {
+    ($($item:expr),*$(,)?) => (vec![$($item.to_string()),*]);
 }
 
 #[macro_export]
