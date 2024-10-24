@@ -117,7 +117,12 @@ impl Clipper {
             ));
         }
 
-        args.append(&mut string_vec!["-filter_complex", filters.join(";")]);
+        args.append(&mut string_vec![
+            "-filter_complex",
+            filters.join(";"),
+            "-pix_fmt",
+            "yuv420p",
+        ]);
 
         if !self.0.no_video {
             args.append(&mut string_vec!["-map", "[v]"]);
