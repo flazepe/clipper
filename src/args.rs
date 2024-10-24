@@ -4,7 +4,7 @@ use std::env::args as env_args;
 /// A simple ffmpeg wrapper for clipping videos.
 pub struct Args {
     /// The input file
-    pub input: Vec<(String, Vec<String>)>,
+    pub input: Vec<Input>,
 
     /// Whether to fade between segments. If set (e.g. "-fade=1"), this would be the fade duration in seconds (default: 0.5)
     pub fade: Option<f64>,
@@ -50,6 +50,8 @@ impl Args {
 
                 match option {
                     "input" | "i" => current_option = Some(option.into()),
+                    "audio-track" | "at" => current_option = Some(option.into()),
+                    "subtitle-track" | "st" => current_option = Some(option.into()),
                     "segment" | "s" => current_option = Some(option.into()),
                     "fade" | "f" => {
                         fade = arg
@@ -70,10 +72,25 @@ impl Args {
 
             if let Some(option) = &current_option {
                 match option.as_str() {
-                    "input" | "i" => input.push((arg, vec![])),
+                    "input" | "i" => input.push(Input {
+                        file: arg,
+                        segments: vec![],
+                        audio_track: None,
+                        subtitle_track: None,
+                    }),
+                    "audio-track" | "at" => {
+                        if let Some(last_input) = input.last_mut() {
+                            last_input.audio_track = Some(arg);
+                        }
+                    }
+                    "subtitle-track" | "st" => {
+                        if let Some(last_input) = input.last_mut() {
+                            last_input.subtitle_track = Some(arg);
+                        }
+                    }
                     "segment" | "s" => {
-                        if let Some((_, segments)) = input.last_mut() {
-                            segments.push(arg);
+                        if let Some(last_input) = input.last_mut() {
+                            last_input.segments.push(arg);
                         }
                     }
                     "cq" => cq = Some(arg),
@@ -91,8 +108,8 @@ impl Args {
             error!("Please enter at least one input.");
         }
 
-        if let Some((input, _)) = input.iter().find(|input| input.1.is_empty()) {
-            error!(format!(r#"Input "{input}" has no segments."#));
+        if let Some(input) = input.iter().find(|input| input.segments.is_empty()) {
+            error!(format!(r#"Input "{}" has no segments."#, input.file));
         }
 
         if cq.as_ref().map_or(false, |cq| cq.parse::<f64>().is_err()) {
@@ -118,4 +135,11 @@ impl Args {
             output,
         }
     }
+}
+
+pub struct Input {
+    pub file: String,
+    pub segments: Vec<String>,
+    pub audio_track: Option<String>,
+    pub subtitle_track: Option<String>,
 }

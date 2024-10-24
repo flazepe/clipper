@@ -27,6 +27,13 @@ clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -f output.mp4
 clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -f=1 output.mp4
 ```
 
+Setting audio track and burning subtitles from input. This option works per input, like segments
+
+```
+clipper -input input.mp4 -audio-track 1 -subtitle-track 1 -segment 2:00-2:30 -segment 5:12-5:20 output.mp4
+clipper -input input.mp4 -at 1 -st 1 -segment 2:00-2:30 -segment 5:12-5:20 output.mp4
+```
+
 Using NVENC with CQ
 
 ```

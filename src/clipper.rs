@@ -44,10 +44,10 @@ impl Clipper {
         let mut filters = vec![];
         let mut segment_count = 0;
 
-        for (input_index, (input, segments)) in self.0.input.iter().enumerate() {
-            args.append(&mut string_vec!["-i", input]);
+        for (input_index, input) in self.0.input.iter().enumerate() {
+            args.append(&mut string_vec!["-i", input.file]);
 
-            for segment in segments {
+            for segment in &input.segments {
                 let (from, to) = segment
                     .split_once('-')
                     .map(|(from, to)| (Self::duration_to_secs(from), Self::duration_to_secs(to)))
@@ -57,7 +57,18 @@ impl Clipper {
                 let fade_to = to - self.0.fade.unwrap_or(0.) - 0.5;
 
                 if !self.0.no_video {
-                    let mut video_filters = vec![format!("[{input_index}:v]trim={from}:{to}")];
+                    let video_label = match input.subtitle_track.as_ref() {
+                        Some(subtitle_track) => {
+                            let video_label = format!("v{input_index}s{subtitle_track}");
+                            filters.push(format!(
+                                r#"[{input_index}:v]subtitles={}:si={subtitle_track}[{video_label}]"#,
+                                Self::escape_ffmpeg_chars(&input.file),
+                            ));
+                            video_label
+                        }
+                        None => format!("{input_index}:v"),
+                    };
+                    let mut video_filters = vec![format!("[{video_label}]trim={from}:{to}")];
                     if let Some(fade) = self.0.fade {
                         video_filters.extend_from_slice(&[
                             format!("fade=t=in:st={from}:d={fade}"),
@@ -69,7 +80,9 @@ impl Clipper {
                 }
 
                 if !self.0.no_audio {
-                    let mut audio_filters = vec![format!("[{input_index}:a]atrim={from}:{to}")];
+                    let audio_track = input.audio_track.as_deref().unwrap_or("");
+                    let mut audio_filters =
+                        vec![format!("[{input_index}:a:{audio_track}]atrim={from}:{to}")];
                     if let Some(fade) = self.0.fade {
                         audio_filters.extend_from_slice(&[
                             format!("afade=t=in:st={from}:d={fade}"),
@@ -151,6 +164,22 @@ impl Clipper {
             3 => (split[0] * 3600.) + (split[1] * 60.) + split[2],
             _ => 0.,
         }
+    }
+
+    fn escape_ffmpeg_chars<T: Display>(string: T) -> String {
+        let mut chars = vec![];
+
+        for char in string.to_string().chars() {
+            if ['\'', '[', '\\', ']'].contains(&char) {
+                chars.extend_from_slice(&['\\', '\\', '\\', char, '\\', '\\', '\\']);
+            } else if char == ':' {
+                chars.extend_from_slice(&['\\', '\\', ':']);
+            } else {
+                chars.push(char);
+            }
+        }
+
+        chars.into_iter().collect()
     }
 }
 
