@@ -170,12 +170,14 @@ impl Clipper {
         let mut chars = vec![];
 
         for char in string.to_string().chars() {
-            if ['\'', '[', '\\', ']'].contains(&char) {
-                chars.extend_from_slice(&['\\', '\\', '\\', char, '\\', '\\', '\\']);
-            } else if char == ':' {
-                chars.extend_from_slice(&['\\', '\\', ':']);
-            } else {
-                chars.push(char);
+            match char {
+                '\'' | '[' | '\\' | ']' => {
+                    chars.extend_from_slice(&['\\', '\\', '\\', char, '\\', '\\', '\\'])
+                }
+                ':' => {
+                    chars.extend_from_slice(&['\\', '\\', char]);
+                }
+                _ => chars.push(char),
             }
         }
 
