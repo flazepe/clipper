@@ -47,7 +47,18 @@ impl Clipper {
         for (input_index, input) in self.0.input.iter().enumerate() {
             args.append(&mut string_vec!["-i", input.file]);
 
-            for segment in &input.segments {
+            let subtitled_video_label = input.subtitle_track.as_ref().map(|subtitle_track| {
+                let label = format!("v{input_index}s{subtitle_track}");
+                filters.push(format!(
+                    r#"[{input_index}:v]subtitles={}:si={subtitle_track}[{label}];[{label}]split{}"#,
+                    Self::escape_ffmpeg_chars(&input.file),
+                    (0..input.segments.len())
+                        .fold("".into(), |acc, cur| format!("{acc}[{label}p{cur}]")),
+                ));
+                label
+            });
+
+            for (segment_index, segment) in input.segments.iter().enumerate() {
                 let (from, to) = segment
                     .split_once('-')
                     .map(|(from, to)| (Self::duration_to_secs(from), Self::duration_to_secs(to)))
@@ -57,18 +68,13 @@ impl Clipper {
                 let fade_to = to - self.0.fade.unwrap_or(0.) - 0.5;
 
                 if !self.0.no_video {
-                    let video_label = match input.subtitle_track.as_ref() {
-                        Some(subtitle_track) => {
-                            let video_label = format!("v{input_index}s{subtitle_track}");
-                            filters.push(format!(
-                                r#"[{input_index}:v]subtitles={}:si={subtitle_track}[{video_label}]"#,
-                                Self::escape_ffmpeg_chars(&input.file),
-                            ));
-                            video_label
-                        }
-                        None => format!("{input_index}:v"),
-                    };
-                    let mut video_filters = vec![format!("[{video_label}]trim={from}:{to}")];
+                    let mut video_filters = vec![format!(
+                        "[{}]trim={from}:{to}",
+                        subtitled_video_label.as_ref().map_or_else(
+                            || format!("{input_index}:v"),
+                            |label| format!("{label}p{segment_index}"),
+                        ),
+                    )];
                     if let Some(fade) = self.0.fade {
                         video_filters.extend_from_slice(&[
                             format!("fade=t=in:st={from}:d={fade}"),
