@@ -30,9 +30,9 @@ Adding a fade transition between segments with optional duration in seconds (thi
 
 ```
 clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -fade output.mp4
-clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -fade=1 output.mp4
-
 clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -f output.mp4
+
+clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -fade=1 output.mp4
 clipper -i input.mp4 -s 2:00-2:30 -s 5:12-5:20 -f=1 output.mp4
 ```
 
