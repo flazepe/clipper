@@ -50,8 +50,9 @@ impl Clipper {
             let subtitled_video_label = input.subtitle_track.as_ref().map(|subtitle_track| {
                 let label = format!("v{input_index}s{subtitle_track}");
                 filters.push(format!(
-                    r#"[{input_index}:v]subtitles={}:si={subtitle_track}[{label}];[{label}]split{}"#,
+                    r#"[{input_index}:v]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}"#,
                     Self::escape_ffmpeg_chars(&input.file),
+                    input.segments.len(),
                     (0..input.segments.len())
                         .fold("".into(), |acc, cur| format!("{acc}[{label}p{cur}]")),
                 ));
