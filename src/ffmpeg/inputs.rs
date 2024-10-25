@@ -129,13 +129,13 @@ impl IntoIterator for Inputs {
             ));
         } else if self.no_audio {
             filters.push(format!(
-                "{}concat=n={}[v]",
+                "{}concat=n={}:v=1:a=0[v]",
                 (0..segment_count).fold("".into(), |acc, cur| format!("{acc}[v{cur}]")),
                 segment_count,
             ));
         } else {
             filters.push(format!(
-                "{}concat=n={}:a=1[v][a]",
+                "{}concat=n={}:v=1:a=1[v][a]",
                 (0..segment_count).fold("".into(), |acc, cur| format!("{acc}[v{cur}][a{cur}]")),
                 segment_count,
             ));
