@@ -64,13 +64,13 @@ impl IntoIterator for Inputs {
 
             let video_label = format!("{input_index}:v:{}", input.video_track);
             let subtitled_video_label = input.subtitle_track.as_ref().map(|subtitle_track| {
-                let label = format!("{video_label}s{subtitle_track}");
+                let label = format!("{video_label}:si={subtitle_track}");
                 filters.push(format!(
                     r#"[{video_label}]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}"#,
                     escape_ffmpeg_chars(&input.file),
                     input.segments.len(),
                     (0..input.segments.len())
-                        .fold("".into(), |acc, cur| format!("{acc}[{label}p{cur}]")),
+                        .fold("".into(), |acc, cur| format!("{acc}[{label}:{cur}]")),
                 ));
                 label
             });
@@ -86,10 +86,10 @@ impl IntoIterator for Inputs {
 
                 if !self.no_video {
                     let mut video_filters = vec![format!(
-                        "[{}]trim={from}{to}",
+                        "[{}]trim={from}:{to}",
                         subtitled_video_label.as_ref().map_or_else(
                             || video_label.clone(),
-                            |label| format!("{label}p{segment_index}"),
+                            |label| format!("{label}:{segment_index}"),
                         ),
                     )];
                     if let Some(fade) = self.fade {
@@ -104,7 +104,7 @@ impl IntoIterator for Inputs {
 
                 if !self.no_audio {
                     let mut audio_filters = vec![format!(
-                        "[{input_index}:a:{}]atrim={from}{to}",
+                        "[{input_index}:a:{}]atrim={from}:{to}",
                         input.audio_track,
                     )];
                     if let Some(fade) = self.fade {
