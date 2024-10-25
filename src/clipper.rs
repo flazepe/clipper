@@ -1,17 +1,156 @@
-use crate::{args::Args, error, string_vec};
-use std::{fmt::Display, process::Command};
+use crate::{
+    error,
+    ffmpeg::{Encoder, Input, Inputs, Output},
+};
+use std::{env::args, process::Command};
 
-pub struct Clipper(Args);
+pub struct Clipper {
+    pub inputs: Inputs,
+    pub encoder: Encoder,
+    pub output: Output,
+    pub dry_run: bool,
+}
 
 impl Clipper {
-    pub fn new(args: Args) -> Self {
-        Self(args)
+    pub fn new() -> Self {
+        let mut inputs = Inputs {
+            inputs: vec![],
+            fade: None,
+            no_video: false,
+            no_audio: false,
+        };
+        let mut nvenc = false;
+        let mut hevc = false;
+        let mut preset = None;
+        let mut crf = None;
+        let mut cq = None;
+        let mut output = None;
+        let mut dry_run = false;
+        let mut current_option = None::<String>;
+
+        for arg in args().skip(1) {
+            let arg = arg.clone();
+
+            if arg.starts_with('-') {
+                let option = arg.trim_start_matches('-').split('=').next().unwrap_or("");
+
+                match option {
+                    "input" | "i" => current_option = Some(option.into()),
+                    "video-track" | "vt" => current_option = Some(option.into()),
+                    "audio-track" | "at" => current_option = Some(option.into()),
+                    "subtitle-track" | "st" => current_option = Some(option.into()),
+                    "segment" | "s" => current_option = Some(option.into()),
+                    "fade" | "f" => {
+                        inputs.fade = arg
+                            .split('=')
+                            .last()
+                            .map(|fade| fade.parse::<f64>().unwrap_or(0.5));
+                    }
+                    "nvenc" => nvenc = true,
+                    "hevc" => hevc = true,
+                    "preset" | "p" => current_option = Some(option.into()),
+                    "crf" => current_option = Some(option.into()),
+                    "cq" => current_option = Some(option.into()),
+                    "no-video" | "vn" => inputs.no_video = true,
+                    "no-audio" | "an" => inputs.no_audio = true,
+                    "dry-run" | "d" => dry_run = true,
+                    _ => error!(format!("Invalid option: -{option}")),
+                }
+
+                continue;
+            }
+
+            if let Some(option) = &current_option {
+                match option.as_str() {
+                    "input" | "i" => inputs.inputs.push(Input {
+                        file: arg,
+                        segments: vec![],
+                        video_track: None,
+                        audio_track: None,
+                        subtitle_track: None,
+                    }),
+                    "video-track" | "vt" => {
+                        if let Some(last_input) = inputs.inputs.last_mut() {
+                            last_input.video_track = Some(arg.parse::<u8>().unwrap_or_else(|_| {
+                                error!(format!("Invalid video track: {arg}"));
+                            }));
+                        }
+                    }
+                    "audio-track" | "at" => {
+                        if let Some(last_input) = inputs.inputs.last_mut() {
+                            last_input.audio_track = Some(arg.parse::<u8>().unwrap_or_else(|_| {
+                                error!(format!("Invalid audio track: {arg}"));
+                            }));
+                        }
+                    }
+                    "subtitle-track" | "st" => {
+                        if let Some(last_input) = inputs.inputs.last_mut() {
+                            last_input.subtitle_track =
+                                Some(arg.parse::<u8>().unwrap_or_else(|_| {
+                                    error!(format!("Invalid subtitle track: {arg}"));
+                                }));
+                        }
+                    }
+                    "segment" | "s" => {
+                        if let Some(last_input) = inputs.inputs.last_mut() {
+                            last_input.segments.push(arg);
+                        }
+                    }
+                    "preset" | "p" => preset = Some(arg),
+                    "crf" => {
+                        crf = Some(
+                            arg.parse::<f64>()
+                                .unwrap_or_else(|_| error!(format!("Invalid CRF value: {arg}"))),
+                        );
+                    }
+                    "cq" => {
+                        cq = Some(
+                            arg.parse::<f64>()
+                                .unwrap_or_else(|_| error!(format!("Invalid CQ value: {arg}"))),
+                        );
+                    }
+                    _ => {}
+                }
+
+                current_option = None;
+            } else {
+                output = Some(Output(arg));
+            }
+        }
+
+        // Validations
+        if inputs.inputs.is_empty() {
+            error!("Please enter at least one input.");
+        }
+
+        if let Some(input) = inputs.inputs.iter().find(|input| input.segments.is_empty()) {
+            error!(format!(r#"Input "{}" has no segments."#, input.file));
+        }
+
+        if inputs.no_video && inputs.no_audio {
+            error!("Video and audio track cannot be disabled at the same time.");
+        }
+
+        let Some(output) = output else {
+            error!("Please specify an output file.");
+        };
+
+        Self {
+            inputs,
+            encoder: if nvenc {
+                Encoder::Nvenc { hevc, preset, cq }
+            } else {
+                Encoder::Cpu { hevc, preset, crf }
+            },
+            dry_run,
+            output,
+        }
     }
 
     pub fn run(&self) {
         let ffmpeg_args = self.generate_ffmpeg_args();
 
-        if self.0.dry_run {
+        if self.dry_run {
             println!(
                 "{}",
                 ffmpeg_args.iter().fold("ffmpeg".into(), |acc, cur| format!(
@@ -33,167 +172,10 @@ impl Clipper {
 
     fn generate_ffmpeg_args(&self) -> Vec<String> {
         let mut ffmpeg_args = vec![];
-        ffmpeg_args.append(&mut self.generate_ffmpeg_input_and_filter_args());
-        ffmpeg_args.append(&mut self.generate_ffmpeg_encoder_args());
-        ffmpeg_args.push(self.0.output.clone());
+        ffmpeg_args.append(&mut self.inputs.to_args());
+        ffmpeg_args.append(&mut self.encoder.to_args());
+        ffmpeg_args.append(&mut self.output.to_args());
         ffmpeg_args
-    }
-
-    fn generate_ffmpeg_input_and_filter_args(&self) -> Vec<String> {
-        let mut args = vec![];
-        let mut filters = vec![];
-        let mut segment_count = 0;
-
-        for (input_index, input) in self.0.input.iter().enumerate() {
-            args.append(&mut string_vec!["-i", input.file]);
-
-            let subtitled_video_label = input.subtitle_track.as_ref().map(|subtitle_track| {
-                let label = format!("v{input_index}s{subtitle_track}");
-                filters.push(format!(
-                    r#"[{input_index}:v]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}"#,
-                    Self::escape_ffmpeg_chars(&input.file),
-                    input.segments.len(),
-                    (0..input.segments.len())
-                        .fold("".into(), |acc, cur| format!("{acc}[{label}p{cur}]")),
-                ));
-                label
-            });
-
-            for (segment_index, segment) in input.segments.iter().enumerate() {
-                let (from, to) = segment
-                    .split_once('-')
-                    .map(|(from, to)| (Self::duration_to_secs(from), Self::duration_to_secs(to)))
-                    .unwrap_or_else(|| {
-                        error!(format!("Invalid segment duration range: {segment}"))
-                    });
-                let fade_to = to - self.0.fade.unwrap_or(0.) - 0.5;
-
-                if !self.0.no_video {
-                    let mut video_filters = vec![format!(
-                        "[{}]trim={from}:{to}",
-                        subtitled_video_label.as_ref().map_or_else(
-                            || format!("{input_index}:v"),
-                            |label| format!("{label}p{segment_index}"),
-                        ),
-                    )];
-                    if let Some(fade) = self.0.fade {
-                        video_filters.extend_from_slice(&[
-                            format!("fade=t=in:st={from}:d={fade}"),
-                            format!("fade=t=out:st={fade_to}:d={fade}"),
-                        ]);
-                    }
-                    video_filters.push(format!("setpts=PTS-STARTPTS[v{segment_count}]"));
-                    filters.push(video_filters.join(","));
-                }
-
-                if !self.0.no_audio {
-                    let audio_track = input.audio_track.as_deref().unwrap_or("");
-                    let mut audio_filters =
-                        vec![format!("[{input_index}:a:{audio_track}]atrim={from}:{to}")];
-                    if let Some(fade) = self.0.fade {
-                        audio_filters.extend_from_slice(&[
-                            format!("afade=t=in:st={from}:d={fade}"),
-                            format!("afade=t=out:st={fade_to}:d={fade}"),
-                        ]);
-                    }
-                    audio_filters.push(format!("asetpts=PTS-STARTPTS[a{segment_count}]"));
-                    filters.push(audio_filters.join(","));
-                }
-
-                segment_count += 1;
-            }
-        }
-
-        if self.0.no_video {
-            filters.push(format!(
-                "{}concat=n={}:v=0:a=1[a]",
-                (0..segment_count).fold("".into(), |acc, cur| format!("{acc}[a{cur}]")),
-                segment_count,
-            ));
-        } else if self.0.no_audio {
-            filters.push(format!(
-                "{}concat=n={}[v]",
-                (0..segment_count).fold("".into(), |acc, cur| format!("{acc}[v{cur}]")),
-                segment_count,
-            ));
-        } else {
-            filters.push(format!(
-                "{}concat=n={}:a=1[v][a]",
-                (0..segment_count).fold("".into(), |acc, cur| format!("{acc}[v{cur}][a{cur}]")),
-                segment_count,
-            ));
-        }
-
-        args.append(&mut string_vec![
-            "-filter_complex",
-            filters.join(";"),
-            "-pix_fmt",
-            "yuv420p",
-        ]);
-
-        if !self.0.no_video {
-            args.append(&mut string_vec!["-map", "[v]"]);
-        }
-
-        if !self.0.no_audio {
-            args.append(&mut string_vec!["-map", "[a]"]);
-        }
-
-        args
-    }
-
-    fn generate_ffmpeg_encoder_args(&self) -> Vec<String> {
-        if let Some(cq) = self.0.cq.as_ref() {
-            string_vec![
-                "-c:v",
-                if self.0.hevc {
-                    "hevc_nvenc"
-                } else {
-                    "h264_nvenc"
-                },
-                "-cq",
-                cq,
-            ]
-        } else {
-            string_vec!["-c:v", if self.0.hevc { "libx265" } else { "libx264" }]
-        }
-    }
-
-    fn duration_to_secs<T: Display>(duration: T) -> f64 {
-        let split = duration
-            .to_string()
-            .split(':')
-            .map(|entry| {
-                entry
-                    .parse::<f64>()
-                    .unwrap_or_else(|_| error!(format!("Invalid segment duration: {entry}")))
-            })
-            .collect::<Vec<f64>>();
-
-        match split.len() {
-            1 => split[0],
-            2 => (split[0] * 60.) + split[1],
-            3 => (split[0] * 3600.) + (split[1] * 60.) + split[2],
-            _ => 0.,
-        }
-    }
-
-    fn escape_ffmpeg_chars<T: Display>(string: T) -> String {
-        let mut chars = vec![];
-
-        for char in string.to_string().chars() {
-            match char {
-                '\'' | '[' | '\\' | ']' => {
-                    chars.extend_from_slice(&['\\', '\\', '\\', char, '\\', '\\', '\\'])
-                }
-                ':' => {
-                    chars.extend_from_slice(&['\\', '\\', char]);
-                }
-                _ => chars.push(char),
-            }
-        }
-
-        chars.into_iter().collect()
     }
 }
 

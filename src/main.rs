@@ -1,9 +1,8 @@
-mod args;
 mod clipper;
+mod ffmpeg;
 
-use args::Args;
 use clipper::Clipper;
 
 fn main() {
-    Clipper::new(Args::parse()).run();
+    Clipper::new().run();
 }
