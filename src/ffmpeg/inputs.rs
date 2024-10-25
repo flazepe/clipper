@@ -66,7 +66,7 @@ impl IntoIterator for Inputs {
             let subtitled_video_label = input.subtitle_track.as_ref().map(|subtitle_track| {
                 let label = format!("{video_label}:si={subtitle_track}");
                 filters.push(format!(
-                    r#"[{video_label}]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}"#,
+                    "[{video_label}]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}",
                     escape_ffmpeg_chars(&input.file),
                     input.segments.len(),
                     (0..input.segments.len())
