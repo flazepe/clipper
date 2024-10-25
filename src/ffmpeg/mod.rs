@@ -1,10 +1,12 @@
 pub mod encoder;
+pub mod input;
 pub mod inputs;
 pub mod output;
 
 use crate::error;
 pub use encoder::Encoder;
-pub use inputs::{Input, Inputs};
+pub use input::Input;
+pub use inputs::Inputs;
 pub use output::Output;
 use std::fmt::Display;
 
