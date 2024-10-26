@@ -32,6 +32,7 @@ impl Clipper {
                     "video-track" | "vt" => current_option = Some(option.into()),
                     "audio-track" | "at" => current_option = Some(option.into()),
                     "subtitle-track" | "st" => current_option = Some(option.into()),
+                    "speed" | "spd" => current_option = Some(option.into()),
                     "segment" | "s" => current_option = Some(option.into()),
                     "fade" | "f" => inputs.set_fade(arg),
                     "nvenc" => encoder.set_nvenc(true),
@@ -64,6 +65,11 @@ impl Clipper {
                     "subtitle-track" | "st" => {
                         if let Some(last_input) = inputs.get_last_input_mut() {
                             last_input.set_subtitle_track(arg);
+                        }
+                    }
+                    "speed" | "spd" => {
+                        if let Some(last_input) = inputs.get_last_input_mut() {
+                            last_input.set_speed(arg);
                         }
                     }
                     "segment" | "s" => {

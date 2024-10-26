@@ -64,7 +64,7 @@ impl IntoIterator for Inputs {
             args.append(&mut string_vec!["-i", input.file]);
 
             let video_label = format!("{input_index}:v:{}", input.video_track);
-            let subtitled_video_label = input.subtitle_track.as_ref().map(|subtitle_track| {
+            let label_subtitled_video = input.subtitle_track.as_ref().map(|subtitle_track| {
                 let label = format!("{video_label}:si={subtitle_track}");
                 filters.push(format!(
                     "[{video_label}]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}",
@@ -73,7 +73,7 @@ impl IntoIterator for Inputs {
                     (0..input.segments.len())
                         .fold("".into(), |acc, cur| format!("{acc}[{label}:{cur}]")),
                 ));
-                label
+                move |segment_index| format!("{label}:{segment_index}")
             });
 
             for (segment_index, segment) in input.segments.iter().enumerate() {
@@ -83,23 +83,26 @@ impl IntoIterator for Inputs {
                     .unwrap_or_else(|| {
                         error!("Invalid segment duration range: {segment}");
                     });
-                let fade_to = to - self.fade.unwrap_or(0.) - 0.5;
+                let fade_to = to - self.fade.unwrap_or(0.) * input.speed - 0.5;
 
                 if !self.no_video {
                     let mut video_filters = vec![format!(
                         "[{}]trim={from}:{to}",
-                        subtitled_video_label.as_ref().map_or_else(
-                            || video_label.clone(),
-                            |label| format!("{label}:{segment_index}"),
-                        ),
+                        label_subtitled_video
+                            .as_ref()
+                            .map_or_else(|| video_label.clone(), |func| func(segment_index)),
                     )];
-                    if let Some(fade) = self.fade {
+                    if let Some(mut fade) = self.fade {
+                        fade *= input.speed;
                         video_filters.extend_from_slice(&[
                             format!("fade=t=in:st={from}:d={fade}"),
                             format!("fade=t=out:st={fade_to}:d={fade}"),
                         ]);
                     }
-                    video_filters.push(format!("setpts=PTS-STARTPTS[v{segment_count}]"));
+                    video_filters.push(format!(
+                        "setpts=(PTS-STARTPTS)/{}[v{segment_count}]",
+                        input.speed,
+                    ));
                     filters.push(video_filters.join(","));
                 }
 
@@ -113,6 +116,9 @@ impl IntoIterator for Inputs {
                             format!("afade=t=in:st={from}:d={fade}"),
                             format!("afade=t=out:st={fade_to}:d={fade}"),
                         ]);
+                    }
+                    if input.speed != 1. {
+                        audio_filters.push(format!("atempo={}", input.speed));
                     }
                     audio_filters.push(format!("asetpts=PTS-STARTPTS[a{segment_count}]"));
                     filters.push(audio_filters.join(","));

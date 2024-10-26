@@ -6,6 +6,7 @@ pub struct Input {
     pub video_track: u8,
     pub audio_track: u8,
     pub subtitle_track: Option<u8>,
+    pub speed: f64,
 }
 
 impl Input {
@@ -16,6 +17,7 @@ impl Input {
             video_track: 0,
             audio_track: 0,
             subtitle_track: None,
+            speed: 1.,
         }
     }
 
@@ -39,5 +41,17 @@ impl Input {
         self.subtitle_track = Some(subtitle_track.parse::<u8>().unwrap_or_else(|_| {
             error!("Invalid subtitle track: {subtitle_track}");
         }));
+    }
+
+    pub fn set_speed(&mut self, speed: String) {
+        let speed = speed.parse::<f64>().unwrap_or_else(|_| {
+            error!("Invalid speed multiplier: {speed}");
+        });
+
+        if !(0.5..100.).contains(&speed) {
+            error!("Speed multiplier must be between 0.5 and 100. Received: {speed}");
+        }
+
+        self.speed = speed;
     }
 }
