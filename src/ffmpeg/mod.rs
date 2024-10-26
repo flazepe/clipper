@@ -17,7 +17,7 @@ pub fn duration_to_secs<T: Display>(duration: T) -> f64 {
         .map(|entry| {
             entry
                 .parse::<f64>()
-                .unwrap_or_else(|_| error!(format!("Invalid segment duration: {entry}")))
+                .unwrap_or_else(|_| error!("Invalid segment duration: {entry}"))
         })
         .collect::<Vec<f64>>();
 

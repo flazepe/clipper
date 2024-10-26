@@ -29,7 +29,7 @@ impl Encoder {
         }
 
         self.crf = Some(crf.parse::<f64>().unwrap_or_else(|_| {
-            error!(format!("Invalid CRF value: {crf}"));
+            error!("Invalid CRF value: {crf}");
         }));
     }
 
@@ -39,7 +39,7 @@ impl Encoder {
         }
 
         self.cq = Some(cq.parse::<f64>().unwrap_or_else(|_| {
-            error!(format!("Invalid CQ value: {cq}"));
+            error!("Invalid CQ value: {cq}");
         }));
     }
 }

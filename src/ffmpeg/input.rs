@@ -25,19 +25,19 @@ impl Input {
 
     pub fn set_video_track(&mut self, video_track: String) {
         self.video_track = video_track.parse::<u8>().unwrap_or_else(|_| {
-            error!(format!("Invalid video track: {video_track}"));
+            error!("Invalid video track: {video_track}");
         });
     }
 
     pub fn set_audio_track(&mut self, audio_track: String) {
         self.audio_track = audio_track.parse::<u8>().unwrap_or_else(|_| {
-            error!(format!("Invalid audio track: {audio_track}"));
+            error!("Invalid audio track: {audio_track}");
         });
     }
 
     pub fn set_subtitle_track(&mut self, subtitle_track: String) {
         self.subtitle_track = Some(subtitle_track.parse::<u8>().unwrap_or_else(|_| {
-            error!(format!("Invalid subtitle track: {subtitle_track}"));
+            error!("Invalid subtitle track: {subtitle_track}");
         }));
     }
 }

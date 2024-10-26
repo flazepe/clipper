@@ -48,7 +48,8 @@ impl IntoIterator for Inputs {
         }
 
         if let Some(input) = self.inputs.iter().find(|input| input.segments.is_empty()) {
-            error!(format!(r#"Input "{}" has no segments."#, input.file));
+            let file = &input.file;
+            error!(r#"Input "{file}" has no segments."#);
         }
 
         if self.no_video && self.no_audio {
@@ -80,7 +81,7 @@ impl IntoIterator for Inputs {
                     .split_once('-')
                     .map(|(from, to)| (duration_to_secs(from), duration_to_secs(to)))
                     .unwrap_or_else(|| {
-                        error!(format!("Invalid segment duration range: {segment}"));
+                        error!("Invalid segment duration range: {segment}");
                     });
                 let fade_to = to - self.fade.unwrap_or(0.) - 0.5;
 

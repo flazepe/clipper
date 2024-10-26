@@ -42,7 +42,7 @@ impl Clipper {
                     "no-video" | "vn" => inputs.set_no_video(true),
                     "no-audio" | "an" => inputs.set_no_audio(true),
                     "dry-run" | "d" => dry_run = true,
-                    _ => error!(format!("Invalid option: -{option}")),
+                    _ => error!("Invalid option: -{option}"),
                 }
 
                 continue;
@@ -140,8 +140,8 @@ macro_rules! string_vec {
 
 #[macro_export]
 macro_rules! error {
-    ($message:expr) => {{
-        println!("\x1b[38;5;203m{}\x1b[0m", $message);
+    ($string:expr) => {{
+        println!("\x1b[38;5;203m{}\x1b[0m", format!($string));
         std::process::exit(1);
     }};
 }
