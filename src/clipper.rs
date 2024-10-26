@@ -124,15 +124,11 @@ impl IntoIterator for Clipper {
 
 impl From<Clipper> for String {
     fn from(value: Clipper) -> Self {
-        value.into_iter().fold("ffmpeg".into(), |acc, cur| {
-            format!(
-                "{acc} {}",
-                if cur.contains(' ') {
-                    format!(r#""{cur}""#)
-                } else {
-                    cur.to_string()
-                },
-            )
+        value.into_iter().fold("ffmpeg".into(), |acc, mut cur| {
+            if cur.contains(' ') {
+                cur = format!(r#""{cur}""#);
+            }
+            format!("{acc} {cur}")
         })
     }
 }
