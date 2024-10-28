@@ -2,7 +2,11 @@ use crate::{
     error,
     ffmpeg::{Encoder, Inputs, Output},
 };
-use std::{env::args, process::Command, vec::IntoIter};
+use std::{
+    env::args,
+    process::{exit, Command},
+    vec::IntoIter,
+};
 
 pub struct Clipper {
     inputs: Inputs,
@@ -43,7 +47,9 @@ impl Clipper {
                     "no-video" | "vn" => inputs.set_no_video(true),
                     "no-audio" | "an" => inputs.set_no_audio(true),
                     "dry-run" | "d" => dry_run = true,
-                    _ => error!("Invalid option: -{option}"),
+                    "help" | "h" => Self::print_help(),
+                    "version" | "v" => Self::print_version(),
+                    _ => error!("Invalid option: -{option}. Use -help for more information."),
                 }
 
                 continue;
@@ -106,6 +112,43 @@ impl Clipper {
                 .spawn()
                 .and_then(|child| child.wait_with_output());
         }
+    }
+
+    fn print_help() {
+        println!(
+            r#"A simple ffmpeg wrapper for clipping videos.
+
+Usage: clipper -input <INPUT> -segment <DURATION RANGE> [OPTIONS] <OUTPUT>
+
+Arguments:
+<OUTPUT>  The output file
+
+Options:
+-input, -i <INPUT>             Add an input file. This option can be repeated to add more inputs
+-video-track, -vt <INDEX>      Set the last input's video track
+-audio-track, -at <INDEX>      Set the last input's audio track
+-subtitle-track, -st <INDEX>   Burn the last input's subtitle track for all its segments
+-speed, -spd <SPEED>           Set the speed multiplier for the last input's segments
+-segment, -s <DURATION RANGE>  Add a segment duration range to the last input (e.g. "-segment 2:00-2:30"). This option can be repeated to add more segments
+-fade, -f[=<FADE>]             Add a fade transition between all segments. If set (e.g. "-fade=1"), this would be the fade duration in seconds (default: 0.5)
+-nvenc                         Encode with NVENC instead of CPU
+-hevc                          Convert to HEVC/H.265 instead of AVC/H.264
+-preset, -p <PRESET>           Set the encoder preset
+-crf <CRF>                     Set the CRF for CPU encoder
+-cq <CQ>                       Set the CQ for NVENC encoder
+-no-video, -vn                 Disable the video track for all inputs
+-no-audio, -an                 Disable the audio track for all inputs
+-dry-run, -d                   Output the ffmpeg command instead of directly running ffmpeg
+-help, -h                      Print help
+-version, -v                   Print version"#
+        );
+
+        exit(0);
+    }
+
+    fn print_version() {
+        println!("v{}", env!("CARGO_PKG_VERSION"));
+        exit(0);
     }
 }
 
