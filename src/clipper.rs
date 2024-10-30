@@ -46,6 +46,8 @@ impl Clipper {
                     "cq" => current_option = Some(option.into()),
                     "no-video" | "vn" => inputs.set_no_video(true),
                     "no-audio" | "an" => inputs.set_no_audio(true),
+                    "force-overwrite" | "y" => output.set_force_overwrite(true),
+                    "force-not-overwrite" | "n" => output.set_force_not_overwrite(true),
                     "dry-run" | "d" => dry_run = true,
                     "help" | "h" => Self::print_help(),
                     "version" | "v" => Self::print_version(),
@@ -138,6 +140,8 @@ Options:
 -cq <CQ>                       Set the CQ for NVENC encoder
 -no-video, -vn                 Disable the video track for all inputs
 -no-audio, -an                 Disable the audio track for all inputs
+-force-overwrite, -y           Force ffmpeg to overwrite the output file without confirmation
+-force-not-overwrite, -n       Force ffmpeg to not overwrite the output file without confirmation
 -dry-run, -d                   Output the ffmpeg command instead of directly running ffmpeg
 -help, -h                      Print help
 -version, -v                   Print version"#
