@@ -8,19 +8,17 @@ use std::{
     vec::IntoIter,
 };
 
+#[derive(Default)]
 pub struct Clipper {
-    inputs: Inputs,
-    encoder: Encoder,
-    output: Output,
-    dry_run: bool,
+    pub inputs: Inputs,
+    pub encoder: Encoder,
+    pub output: Output,
+    pub dry_run: bool,
 }
 
 impl Clipper {
-    pub fn new() -> Self {
-        let mut inputs = Inputs::default();
-        let mut encoder = Encoder::default();
-        let mut output = Output::default();
-        let mut dry_run = false;
+    pub fn from_args() -> Self {
+        let mut clipper = Self::default();
 
         // The current option for parsing args
         let mut current_option = None::<String>;
@@ -38,20 +36,22 @@ impl Clipper {
                     "subtitle-track" | "st" => current_option = Some(option.into()),
                     "speed" | "spd" => current_option = Some(option.into()),
                     "segment" | "s" => current_option = Some(option.into()),
-                    "fade" | "f" => inputs.set_fade(arg),
-                    "nvenc" => encoder.set_nvenc(true),
-                    "hevc" => encoder.set_hevc(true),
+                    "fade" | "f" => clipper.inputs.set_fade(arg),
+                    "nvenc" => clipper.encoder.set_nvenc(true),
+                    "hevc" => clipper.encoder.set_hevc(true),
                     "preset" | "p" => current_option = Some(option.into()),
                     "crf" => current_option = Some(option.into()),
                     "cq" => current_option = Some(option.into()),
-                    "no-video" | "vn" => inputs.set_no_video(true),
-                    "no-audio" | "an" => inputs.set_no_audio(true),
-                    "force-overwrite" | "y" => output.set_force_overwrite(true),
-                    "force-not-overwrite" | "n" => output.set_force_not_overwrite(true),
-                    "dry-run" | "d" => dry_run = true,
+                    "no-video" | "vn" => clipper.inputs.set_no_video(true),
+                    "no-audio" | "an" => clipper.inputs.set_no_audio(true),
+                    "force-overwrite" | "y" => clipper.output.set_force_overwrite(true),
+                    "force-not-overwrite" | "n" => clipper.output.set_force_not_overwrite(true),
+                    "dry-run" | "d" => clipper.dry_run = true,
                     "help" | "h" => Self::print_help(),
                     "version" | "v" => Self::print_version(),
-                    _ => error!("Invalid option: -{option}. Use -help for more information."),
+                    _ => error!(
+                        r#"Invalid option: -{option}. Use "clipper -help" for more information."#,
+                    ),
                 }
 
                 continue;
@@ -59,50 +59,45 @@ impl Clipper {
 
             if let Some(option) = &current_option {
                 match option.as_str() {
-                    "input" | "i" => inputs.add_input(arg),
+                    "input" | "i" => clipper.inputs.add_input(arg),
                     "video-track" | "vt" => {
-                        if let Some(last_input) = inputs.get_last_input_mut() {
+                        if let Some(last_input) = clipper.inputs.get_last_input_mut() {
                             last_input.set_video_track(arg);
                         }
                     }
                     "audio-track" | "at" => {
-                        if let Some(last_input) = inputs.get_last_input_mut() {
+                        if let Some(last_input) = clipper.inputs.get_last_input_mut() {
                             last_input.set_audio_track(arg);
                         }
                     }
                     "subtitle-track" | "st" => {
-                        if let Some(last_input) = inputs.get_last_input_mut() {
+                        if let Some(last_input) = clipper.inputs.get_last_input_mut() {
                             last_input.set_subtitle_track(arg);
                         }
                     }
                     "speed" | "spd" => {
-                        if let Some(last_input) = inputs.get_last_input_mut() {
+                        if let Some(last_input) = clipper.inputs.get_last_input_mut() {
                             last_input.set_speed(arg);
                         }
                     }
                     "segment" | "s" => {
-                        if let Some(last_input) = inputs.get_last_input_mut() {
+                        if let Some(last_input) = clipper.inputs.get_last_input_mut() {
                             last_input.add_segment(arg);
                         }
                     }
-                    "preset" | "p" => encoder.set_preset(arg),
-                    "crf" => encoder.set_crf(arg),
-                    "cq" => encoder.set_cq(arg),
+                    "preset" | "p" => clipper.encoder.set_preset(arg),
+                    "crf" => clipper.encoder.set_crf(arg),
+                    "cq" => clipper.encoder.set_cq(arg),
                     _ => {}
                 }
 
                 current_option = None;
             } else {
-                output.set_file(arg);
+                clipper.output.set_file(arg);
             }
         }
 
-        Self {
-            inputs,
-            encoder,
-            dry_run,
-            output,
-        }
+        clipper
     }
 
     pub fn run(self) {
@@ -156,12 +151,6 @@ Options:
     }
 }
 
-impl Default for Clipper {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl IntoIterator for Clipper {
     type Item = String;
     type IntoIter = IntoIter<Self::Item>;
@@ -193,7 +182,7 @@ macro_rules! string_vec {
 
 #[macro_export]
 macro_rules! error {
-    ($string:expr) => {{
+    ($string:expr$(,)?) => {{
         println!("\x1b[38;5;203m{}\x1b[0m", format!($string));
         std::process::exit(1);
     }};

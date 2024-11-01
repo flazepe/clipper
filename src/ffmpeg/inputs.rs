@@ -8,7 +8,7 @@ use std::vec::IntoIter;
 #[derive(Default)]
 pub struct Inputs {
     inputs: Vec<Input>,
-    fade: Option<f64>,
+    fade: f64,
     no_video: bool,
     no_audio: bool,
 }
@@ -26,7 +26,8 @@ impl Inputs {
         self.fade = fade
             .split('=')
             .last()
-            .map(|fade| fade.parse::<f64>().unwrap_or(0.5));
+            .map(|fade| fade.parse::<f64>().unwrap_or(0.5))
+            .unwrap_or(0.);
     }
 
     pub fn set_no_video(&mut self, no_video: bool) {
@@ -42,7 +43,7 @@ impl IntoIterator for Inputs {
     type Item = String;
     type IntoIter = IntoIter<Self::Item>;
 
-    fn into_iter(self) -> Self::IntoIter {
+    fn into_iter(mut self) -> Self::IntoIter {
         if self.inputs.is_empty() {
             error!("Please specify at least one input.");
         }
@@ -83,7 +84,7 @@ impl IntoIterator for Inputs {
                     .unwrap_or_else(|| {
                         error!("Invalid segment duration range: {segment}");
                     });
-                let fade_to = to - self.fade.unwrap_or(0.) * input.speed - 0.5;
+                let fade_to = to - self.fade * input.speed - 0.5;
 
                 if !self.no_video {
                     let mut video_filters = vec![format!(
@@ -92,11 +93,11 @@ impl IntoIterator for Inputs {
                             .as_ref()
                             .map_or_else(|| video_label.clone(), |func| func(segment_index)),
                     )];
-                    if let Some(mut fade) = self.fade {
-                        fade *= input.speed;
+                    if self.fade > 0. {
+                        self.fade *= input.speed;
                         video_filters.extend_from_slice(&[
-                            format!("fade=t=in:st={from}:d={fade}"),
-                            format!("fade=t=out:st={fade_to}:d={fade}"),
+                            format!("fade=t=in:st={from}:d={}", self.fade),
+                            format!("fade=t=out:st={fade_to}:d={}", self.fade),
                         ]);
                     }
                     video_filters.push(format!(
@@ -111,10 +112,10 @@ impl IntoIterator for Inputs {
                         "[{input_index}:a:{}]atrim={from}:{to}",
                         input.audio_track,
                     )];
-                    if let Some(fade) = self.fade {
+                    if self.fade > 0. {
                         audio_filters.extend_from_slice(&[
-                            format!("afade=t=in:st={from}:d={fade}"),
-                            format!("afade=t=out:st={fade_to}:d={fade}"),
+                            format!("afade=t=in:st={from}:d={}", self.fade),
+                            format!("afade=t=out:st={fade_to}:d={}", self.fade),
                         ]);
                     }
                     if input.speed != 1. {
