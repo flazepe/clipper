@@ -1,8 +1,8 @@
-use crate::error;
+use crate::{error, ffmpeg::duration_to_secs};
 
 pub struct Input {
     pub file: String,
-    pub segments: Vec<String>,
+    pub segments: Vec<(f64, f64)>,
     pub video_track: u8,
     pub audio_track: u8,
     pub subtitle_track: Option<u8>,
@@ -22,7 +22,14 @@ impl Input {
     }
 
     pub fn add_segment(&mut self, segment: String) {
-        self.segments.push(segment);
+        let (from, to) = segment
+            .split_once('-')
+            .map(|(from, to)| (duration_to_secs(from), duration_to_secs(to)))
+            .unwrap_or_else(|| {
+                error!("Invalid segment duration range: {segment}");
+            });
+
+        self.segments.push((from, to));
     }
 
     pub fn set_video_track(&mut self, video_track: String) {

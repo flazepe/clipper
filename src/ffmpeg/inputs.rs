@@ -1,6 +1,6 @@
 use crate::{
     error,
-    ffmpeg::{duration_to_secs, escape_ffmpeg_chars, Input},
+    ffmpeg::{escape_ffmpeg_chars, Input},
     string_vec,
 };
 use std::vec::IntoIter;
@@ -77,13 +77,7 @@ impl IntoIterator for Inputs {
                 move |segment_index| format!("{label}:{segment_index}")
             });
 
-            for (segment_index, segment) in input.segments.iter().enumerate() {
-                let (from, to) = segment
-                    .split_once('-')
-                    .map(|(from, to)| (duration_to_secs(from), duration_to_secs(to)))
-                    .unwrap_or_else(|| {
-                        error!("Invalid segment duration range: {segment}");
-                    });
+            for (segment_index, (from, to)) in input.segments.iter().enumerate() {
                 let fade_to = to - self.fade * input.speed - 0.5;
 
                 if !self.no_video {
