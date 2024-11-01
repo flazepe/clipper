@@ -2,3 +2,9 @@
 name = "clipper"
 version = "0.2.1"
 edition = "2021"
+
+[lib]
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }

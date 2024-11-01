@@ -3,9 +3,11 @@ use crate::{
     ffmpeg::{escape_ffmpeg_chars, Input},
     string_vec,
 };
+use serde::{Deserialize, Serialize};
 use std::vec::IntoIter;
 
-#[derive(Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Inputs {
     inputs: Vec<Input>,
     fade: f64,

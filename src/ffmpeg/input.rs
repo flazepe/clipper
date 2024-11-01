@@ -1,5 +1,8 @@
 use crate::{error, ffmpeg::duration_to_secs};
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Default, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Input {
     pub file: String,
     pub segments: Vec<(f64, f64)>,

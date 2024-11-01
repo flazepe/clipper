@@ -1,7 +1,9 @@
 use crate::{error, string_vec};
+use serde::{Deserialize, Serialize};
 use std::vec::IntoIter;
 
-#[derive(Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Encoder {
     nvenc: bool,
     hevc: bool,

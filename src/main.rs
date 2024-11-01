@@ -1,8 +1,8 @@
 mod clipper;
 mod ffmpeg;
 
-use clipper::Clipper;
+pub use clipper::Clipper;
 
-fn main() {
-    Clipper::new().run();
+pub fn main() {
+    Clipper::from_args().run();
 }

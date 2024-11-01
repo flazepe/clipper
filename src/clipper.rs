@@ -2,13 +2,15 @@ use crate::{
     error,
     ffmpeg::{Encoder, Inputs, Output},
 };
+use serde::{Deserialize, Serialize};
 use std::{
     env::args,
     process::{exit, Command},
     vec::IntoIter,
 };
 
-#[derive(Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Clipper {
     pub inputs: Inputs,
     pub encoder: Encoder,
