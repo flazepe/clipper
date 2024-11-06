@@ -34,12 +34,10 @@ pub fn escape_ffmpeg_chars<T: Display>(string: T) -> String {
 
     for char in string.to_string().chars() {
         match char {
-            '\'' | '[' | '\\' | ']' => {
-                chars.extend_from_slice(&['\\', '\\', '\\', char, '\\', '\\', '\\'])
-            }
-            ':' => {
-                chars.extend_from_slice(&['\\', '\\', char]);
-            }
+            '[' | ']' => chars.extend_from_slice(&['\\', char]),
+            ':' => chars.extend_from_slice(&['\\', '\\', char]),
+            '\'' => chars.extend_from_slice(&['\\', '\\', '\\', char, '\\', '\\', '\\']),
+            '\\' => chars.push('/'),
             _ => chars.push(char),
         }
     }
