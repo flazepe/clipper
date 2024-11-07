@@ -1,10 +1,9 @@
 use crate::{
-    error,
     ffmpeg::{escape_ffmpeg_chars, Input},
     string_vec,
 };
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use std::vec::IntoIter;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -39,24 +38,18 @@ impl Inputs {
     pub fn set_no_audio(&mut self, no_audio: bool) {
         self.no_audio = no_audio;
     }
-}
 
-impl IntoIterator for Inputs {
-    type Item = String;
-    type IntoIter = IntoIter<Self::Item>;
-
-    fn into_iter(mut self) -> Self::IntoIter {
+    pub fn try_into_vec(mut self) -> Result<Vec<String>> {
         if self.inputs.is_empty() {
-            error!("Please specify at least one input.");
+            bail!("Please specify at least one input.");
         }
 
         if let Some(input) = self.inputs.iter().find(|input| input.segments.is_empty()) {
-            let file = &input.file;
-            error!(r#"Input "{file}" has no segments."#);
+            bail!(r#"Input "{}" has no segments."#, input.file);
         }
 
         if self.no_video && self.no_audio {
-            error!("Video and audio track cannot be disabled at the same time.");
+            bail!("Video and audio track cannot be disabled at the same time.");
         }
 
         let mut args = vec![];
@@ -155,6 +148,6 @@ impl IntoIterator for Inputs {
             args.append(&mut string_vec!["-map", "[a]"]);
         }
 
-        args.into_iter()
+        Ok(args)
     }
 }

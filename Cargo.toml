@@ -7,4 +7,5 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
+anyhow = "1"
 serde = { version = "1", features = ["derive"] }

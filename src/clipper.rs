@@ -1,12 +1,9 @@
-use crate::{
-    error,
-    ffmpeg::{Encoder, Inputs, Output},
-};
+use crate::ffmpeg::{Encoder, Inputs, Output};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     env::args,
     process::{exit, Command},
-    vec::IntoIter,
 };
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -19,7 +16,7 @@ pub struct Clipper {
 }
 
 impl Clipper {
-    pub fn from_args() -> Self {
+    pub fn from_env_args() -> Result<Self> {
         let mut clipper = Self::default();
 
         // The current option for parsing args
@@ -51,7 +48,7 @@ impl Clipper {
                     "dry-run" | "d" => clipper.dry_run = true,
                     "help" | "h" => Self::print_help(),
                     "version" | "v" => Self::print_version(),
-                    _ => error!(
+                    _ => bail!(
                         r#"Invalid option: -{option}. Use "clipper -help" for more information."#,
                     ),
                 }
@@ -64,32 +61,32 @@ impl Clipper {
                     "input" | "i" => clipper.inputs.add_input(arg),
                     "video-track" | "vt" => {
                         if let Some(last_input) = clipper.inputs.get_last_input_mut() {
-                            last_input.set_video_track(arg);
+                            last_input.set_video_track(arg)?;
                         }
                     }
                     "audio-track" | "at" => {
                         if let Some(last_input) = clipper.inputs.get_last_input_mut() {
-                            last_input.set_audio_track(arg);
+                            last_input.set_audio_track(arg)?;
                         }
                     }
                     "subtitle-track" | "st" => {
                         if let Some(last_input) = clipper.inputs.get_last_input_mut() {
-                            last_input.set_subtitle_track(arg);
+                            last_input.set_subtitle_track(arg)?;
                         }
                     }
                     "speed" | "spd" => {
                         if let Some(last_input) = clipper.inputs.get_last_input_mut() {
-                            last_input.set_speed(arg);
+                            last_input.set_speed(arg)?;
                         }
                     }
                     "segment" | "s" => {
                         if let Some(last_input) = clipper.inputs.get_last_input_mut() {
-                            last_input.add_segment(arg);
+                            last_input.add_segment(arg)?;
                         }
                     }
                     "preset" | "p" => clipper.encoder.set_preset(arg),
-                    "crf" => clipper.encoder.set_crf(arg),
-                    "cq" => clipper.encoder.set_cq(arg),
+                    "crf" => clipper.encoder.set_crf(arg)?,
+                    "cq" => clipper.encoder.set_cq(arg)?,
                     _ => {}
                 }
 
@@ -99,18 +96,40 @@ impl Clipper {
             }
         }
 
-        clipper
+        Ok(clipper)
     }
 
-    pub fn run(self) {
+    pub fn try_into_vec(self) -> Result<Vec<String>> {
+        let mut args = vec![];
+        args.extend(self.inputs.try_into_vec()?);
+        args.extend(self.encoder.try_into_vec()?);
+        args.extend(self.output.try_into_vec()?);
+        Ok(args)
+    }
+
+    pub fn try_into_string(self) -> Result<String> {
+        Ok(self
+            .try_into_vec()?
+            .into_iter()
+            .fold("ffmpeg".into(), |acc, mut cur| {
+                if cur.contains(' ') {
+                    cur = format!(r#""{cur}""#);
+                }
+                format!("{acc} {cur}")
+            }))
+    }
+
+    pub fn run(self) -> Result<()> {
         if self.dry_run {
-            println!("{}", String::from(self));
+            println!("{}", self.try_into_string()?);
         } else {
             let _ = Command::new("ffmpeg")
-                .args(self)
+                .args(self.try_into_vec()?)
                 .spawn()
                 .and_then(|child| child.wait_with_output());
         }
+
+        Ok(())
     }
 
     fn print_help() {
@@ -153,39 +172,7 @@ Options:
     }
 }
 
-impl IntoIterator for Clipper {
-    type Item = String;
-    type IntoIter = IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        let mut args = vec![];
-        args.extend(self.inputs);
-        args.extend(self.encoder);
-        args.extend(self.output);
-        args.into_iter()
-    }
-}
-
-impl From<Clipper> for String {
-    fn from(value: Clipper) -> Self {
-        value.into_iter().fold("ffmpeg".into(), |acc, mut cur| {
-            if cur.contains(' ') {
-                cur = format!(r#""{cur}""#);
-            }
-            format!("{acc} {cur}")
-        })
-    }
-}
-
 #[macro_export]
 macro_rules! string_vec {
     ($($item:expr),*$(,)?) => (vec![$($item.to_string()),*]);
-}
-
-#[macro_export]
-macro_rules! error {
-    ($string:expr$(,)?) => {{
-        println!("\x1b[38;5;203m{}\x1b[0m", format!($string));
-        std::process::exit(1);
-    }};
 }

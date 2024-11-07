@@ -1,6 +1,6 @@
-use crate::{error, string_vec};
+use crate::string_vec;
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::vec::IntoIter;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -22,19 +22,11 @@ impl Output {
     pub fn set_force_not_overwrite(&mut self, force_not_overwrite: bool) {
         self.force_not_overwrite = force_not_overwrite;
     }
-}
 
-impl IntoIterator for Output {
-    type Item = String;
-    type IntoIter = IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
+    pub fn try_into_vec(self) -> Result<Vec<String>> {
         let mut args = string_vec!["-pix_fmt", "yuv420p"];
 
-        match self.file {
-            Some(file) => args.push(file),
-            None => error!("Please specify an output file."),
-        }
+        args.push(self.file.context("Please specify an output file.")?);
 
         if self.force_overwrite {
             args.push("-y".into());
@@ -42,6 +34,6 @@ impl IntoIterator for Output {
             args.push("-n".into());
         }
 
-        args.into_iter()
+        Ok(args)
     }
 }

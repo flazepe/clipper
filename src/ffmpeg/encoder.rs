@@ -1,6 +1,6 @@
-use crate::{error, string_vec};
+use crate::string_vec;
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::vec::IntoIter;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -25,32 +25,33 @@ impl Encoder {
         self.preset = Some(preset);
     }
 
-    pub fn set_crf(&mut self, crf: String) {
+    pub fn set_crf(&mut self, crf: String) -> Result<()> {
         if self.nvenc {
-            error!("CRF is only available for CPU encoder.");
+            bail!("CRF is only available for CPU encoder.");
         }
 
-        self.crf = Some(crf.parse::<f64>().unwrap_or_else(|_| {
-            error!("Invalid CRF value: {crf}");
-        }));
+        self.crf = Some(
+            crf.parse::<f64>()
+                .context(format!("Invalid CRF value: {crf}"))?,
+        );
+
+        Ok(())
     }
 
-    pub fn set_cq(&mut self, cq: String) {
+    pub fn set_cq(&mut self, cq: String) -> Result<()> {
         if !self.nvenc {
-            error!("CQ is only available for NVENC encoder.");
+            bail!("CQ is only available for NVENC encoder.");
         }
 
-        self.cq = Some(cq.parse::<f64>().unwrap_or_else(|_| {
-            error!("Invalid CQ value: {cq}");
-        }));
+        self.cq = Some(
+            cq.parse::<f64>()
+                .context(format!("Invalid CQ value: {cq}"))?,
+        );
+
+        Ok(())
     }
-}
 
-impl IntoIterator for Encoder {
-    type Item = String;
-    type IntoIter = IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
+    pub fn try_into_vec(self) -> Result<Vec<String>> {
         let mut args = string_vec!["-c:v"];
 
         if self.nvenc {
@@ -79,6 +80,6 @@ impl IntoIterator for Encoder {
             args.append(&mut string_vec!["-preset", preset]);
         }
 
-        args.into_iter()
+        Ok(args)
     }
 }

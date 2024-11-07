@@ -3,29 +3,29 @@ pub mod input;
 pub mod inputs;
 pub mod output;
 
-use crate::error;
+use anyhow::{Context, Result};
 pub use encoder::Encoder;
 pub use input::Input;
 pub use inputs::Inputs;
 pub use output::Output;
 use std::fmt::Display;
 
-pub fn duration_to_secs<T: Display>(duration: T) -> f64 {
-    let split = duration
-        .to_string()
-        .split(':')
-        .map(|entry| {
+pub fn duration_to_secs<T: Display>(duration: T) -> Result<f64> {
+    let mut split = vec![];
+
+    for entry in duration.to_string().split(':') {
+        split.push(
             entry
                 .parse::<f64>()
-                .unwrap_or_else(|_| error!("Invalid segment duration: {entry}"))
-        })
-        .collect::<Vec<f64>>();
+                .context(format!("Invalid segment duration: {duration}"))?,
+        );
+    }
 
     match split.len() {
-        1 => split[0],
-        2 => (split[0] * 60.) + split[1],
-        3 => (split[0] * 3600.) + (split[1] * 60.) + split[2],
-        _ => 0.,
+        1 => Ok(split[0]),
+        2 => Ok((split[0] * 60.) + split[1]),
+        3 => Ok((split[0] * 3600.) + (split[1] * 60.) + split[2]),
+        _ => Ok(0.),
     }
 }
 
