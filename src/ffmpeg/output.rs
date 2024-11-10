@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Output {
-    file: Option<String>,
-    force_overwrite: bool,
-    force_not_overwrite: bool,
+    pub file: Option<String>,
+    pub force_overwrite: bool,
+    pub force_not_overwrite: bool,
+    pub dry_run: bool,
 }
 
 impl Output {
@@ -21,6 +22,10 @@ impl Output {
 
     pub fn set_force_not_overwrite(&mut self, force_not_overwrite: bool) {
         self.force_not_overwrite = force_not_overwrite;
+    }
+
+    pub fn set_dry_run(&mut self, dry_run: bool) {
+        self.dry_run = dry_run;
     }
 
     pub fn try_into_vec(self) -> Result<Vec<String>> {

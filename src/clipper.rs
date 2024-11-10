@@ -12,7 +12,6 @@ pub struct Clipper {
     pub inputs: Inputs,
     pub encoder: Encoder,
     pub output: Output,
-    pub dry_run: bool,
 }
 
 impl Clipper {
@@ -45,7 +44,7 @@ impl Clipper {
                     "cq" => current_option = Some(option.into()),
                     "force-overwrite" | "y" => clipper.output.set_force_overwrite(true),
                     "force-not-overwrite" | "n" => clipper.output.set_force_not_overwrite(true),
-                    "dry-run" | "d" => clipper.dry_run = true,
+                    "dry-run" | "d" => clipper.output.set_dry_run(true),
                     "help" | "h" => Self::print_help(),
                     "version" | "v" => Self::print_version(),
                     _ => bail!(
@@ -120,7 +119,7 @@ impl Clipper {
     }
 
     pub fn run(self) -> Result<()> {
-        if self.dry_run {
+        if self.output.dry_run {
             println!("{}", self.try_into_string()?);
         } else {
             let _ = Command::new("ffmpeg")

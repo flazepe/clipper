@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Inputs {
-    inputs: Vec<Input>,
-    fade: f64,
-    no_video: bool,
-    no_audio: bool,
+    pub inputs: Vec<Input>,
+    pub fade: f64,
+    pub no_video: bool,
+    pub no_audio: bool,
 }
 
 impl Inputs {

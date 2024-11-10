@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Encoder {
-    nvenc: bool,
-    hevc: bool,
-    preset: Option<String>,
-    crf: Option<f64>,
-    cq: Option<f64>,
+    pub nvenc: bool,
+    pub hevc: bool,
+    pub preset: Option<String>,
+    pub crf: Option<f64>,
+    pub cq: Option<f64>,
 }
 
 impl Encoder {
