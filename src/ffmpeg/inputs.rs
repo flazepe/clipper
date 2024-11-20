@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct Inputs {
     pub inputs: Vec<Input>,
     pub fade: f64,
-    pub resize: Option<String>,
+    pub resize: Option<(u64, u64)>,
     pub no_video: bool,
     pub no_audio: bool,
 }
@@ -56,7 +56,7 @@ impl Inputs {
             height += 1;
         }
 
-        self.resize = Some(format!("{width}:{height}"));
+        self.resize = Some((width, height));
 
         Ok(())
     }
@@ -119,8 +119,8 @@ impl Inputs {
                             format!("fade=t=out:st={fade_to}:d={}", self.fade),
                         ]);
                     }
-                    if let Some(scale) = &self.resize {
-                        video_filters.push(format!("scale={scale}:force_original_aspect_ratio=decrease,pad={scale}:-1:-1,setsar=1",));
+                    if let Some((width, height)) = self.resize {
+                        video_filters.push(format!("scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:-1:-1,setsar=1"));
                     }
                     video_filters.push(format!(
                         "setpts=(PTS-STARTPTS)/{}[v{segment_count}]",
