@@ -120,7 +120,10 @@ impl Inputs {
                         ]);
                     }
                     if let Some((width, height)) = self.resize {
-                        video_filters.push(format!("scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:-1:-1,setsar=1"));
+                        video_filters.extend_from_slice(&[
+                            format!("scale={width}:{height}:force_original_aspect_ratio=decrease"),
+                            format!("pad={width}:{height}:-1:-1,setsar=1"),
+                        ]);
                     }
                     video_filters.push(format!(
                         "setpts=(PTS-STARTPTS)/{}[v{segment_count}]",
