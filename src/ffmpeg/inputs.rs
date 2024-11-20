@@ -2,7 +2,7 @@ use crate::{
     ffmpeg::{escape_ffmpeg_chars, Input},
     string_vec,
 };
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct Inputs {
     pub inputs: Vec<Input>,
     pub fade: f64,
+    pub resize: Option<String>,
     pub no_video: bool,
     pub no_audio: bool,
 }
@@ -29,6 +30,35 @@ impl Inputs {
             .last()
             .map(|fade| fade.parse::<f64>().unwrap_or(0.5))
             .unwrap_or(0.);
+    }
+
+    pub fn set_resize(&mut self, scale: String) -> Result<()> {
+        let split = scale
+            .split_once([':', 'x'])
+            .context(format!("Invalid resize resolution: {scale}"))?;
+
+        let (mut width, mut height) = (
+            split
+                .0
+                .parse::<u64>()
+                .context(format!("Invalid resize width: {}", split.0))?,
+            split
+                .1
+                .parse::<u64>()
+                .context(format!("Invalid resize height: {}", split.1))?,
+        );
+
+        if width % 2 != 0 {
+            width += 1;
+        }
+
+        if height % 2 != 0 {
+            height += 1;
+        }
+
+        self.resize = Some(format!("{width}:{height}"));
+
+        Ok(())
     }
 
     pub fn set_no_video(&mut self, no_video: bool) {
@@ -88,6 +118,9 @@ impl Inputs {
                             format!("fade=t=in:st={from}:d={}", self.fade),
                             format!("fade=t=out:st={fade_to}:d={}", self.fade),
                         ]);
+                    }
+                    if let Some(scale) = &self.resize {
+                        video_filters.push(format!("scale={scale}:force_original_aspect_ratio=decrease,pad={scale}:-1:-1,setsar=1",));
                     }
                     video_filters.push(format!(
                         "setpts=(PTS-STARTPTS)/{}[v{segment_count}]",

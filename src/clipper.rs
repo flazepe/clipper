@@ -35,6 +35,7 @@ impl Clipper {
                     "speed" | "spd" => current_option = Some(option.into()),
                     "segment" | "s" => current_option = Some(option.into()),
                     "fade" | "f" => clipper.inputs.set_fade(arg),
+                    "resize" | "r" => current_option = Some(option.into()),
                     "no-video" | "vn" => clipper.inputs.set_no_video(true),
                     "no-audio" | "an" => clipper.inputs.set_no_audio(true),
                     "nvenc" => clipper.encoder.set_nvenc(true),
@@ -83,6 +84,7 @@ impl Clipper {
                             last_input.add_segment(arg)?;
                         }
                     }
+                    "resize" | "r" => clipper.inputs.set_resize(arg)?,
                     "preset" | "p" => clipper.encoder.set_preset(arg),
                     "crf" => clipper.encoder.set_crf(arg)?,
                     "cq" => clipper.encoder.set_cq(arg)?,
@@ -148,6 +150,7 @@ Options:
 -speed, -spd <SPEED>           Set the speed multiplier for the last input's segments
 -segment, -s <DURATION RANGE>  Add a segment duration range to the last input (e.g. "-segment 2:00-2:30"). This option can be repeated to add more segments
 -fade, -f[=<FADE>]             Add a fade transition between all segments. If set (e.g. "-fade=1"), this would be the fade duration in seconds (default: 0.5)
+-resize, -r <RESOLUTION>       Resize all inputs to a specific resolution
 -nvenc                         Encode with NVENC instead of CPU
 -hevc                          Convert to HEVC/H.265 instead of AVC/H.264
 -preset, -p <PRESET>           Set the encoder preset
