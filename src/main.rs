@@ -1,6 +1,5 @@
-use std::process::exit;
-
 use clipper::Clipper;
+use std::process::exit;
 
 fn main() {
     if let Err(error) = Clipper::from_env_args().and_then(|clipper| clipper.run()) {

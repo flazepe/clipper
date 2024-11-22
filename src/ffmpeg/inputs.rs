@@ -1,5 +1,6 @@
 use crate::{
     ffmpeg::{escape_ffmpeg_chars, Input},
+    ffprobe::get_input_metadata,
     string_vec,
 };
 use anyhow::{bail, Context, Result};
@@ -49,11 +50,11 @@ impl Inputs {
         );
 
         if width % 2 != 0 {
-            width += 1;
+            width -= 1;
         }
 
         if height % 2 != 0 {
-            height += 1;
+            height -= 1;
         }
 
         self.resize = Some((width, height));
@@ -82,11 +83,32 @@ impl Inputs {
             bail!("Video and audio track cannot be disabled at the same time.");
         }
 
+        let mut input_metadata = vec![];
+        let auto_resize = self.resize.is_none();
+
+        for input in self.inputs.iter() {
+            let metadata = get_input_metadata(input)?;
+
+            if auto_resize {
+                if let Some((resize_width, _)) = self.resize {
+                    if metadata.width > resize_width {
+                        self.resize = Some((metadata.width, metadata.height));
+                    }
+                } else {
+                    self.resize = Some((metadata.width, metadata.height));
+                }
+            }
+
+            input_metadata.push(metadata);
+        }
+
         let mut args = vec![];
         let mut filters = vec![];
         let mut segment_count = 0;
 
         for (input_index, input) in self.inputs.iter().enumerate() {
+            let metadata = &input_metadata[input_index];
+
             args.append(&mut string_vec!["-i", input.file]);
 
             let video_label = format!("{input_index}:v:{}", input.video_track);
@@ -119,11 +141,13 @@ impl Inputs {
                             format!("fade=t=out:st={fade_to}:d={}", self.fade),
                         ]);
                     }
-                    if let Some((width, height)) = self.resize {
-                        video_filters.extend_from_slice(&[
-                            format!("scale={width}:{height}:force_original_aspect_ratio=decrease"),
-                            format!("pad={width}:{height}:-1:-1,setsar=1"),
-                        ]);
+                    if let Some((resize_width, resize_height)) = self.resize {
+                        if resize_width != metadata.width || resize_height != metadata.height {
+                            video_filters.extend_from_slice(&[
+                                format!("scale={resize_width}:{resize_height}:force_original_aspect_ratio=decrease"),
+                                format!("pad={resize_width}:{resize_height}:-1:-1,setsar=1"),
+                            ]);
+                        }
                     }
                     video_filters.push(format!(
                         "setpts=(PTS-STARTPTS)/{}[v{segment_count}]",
@@ -133,10 +157,15 @@ impl Inputs {
                 }
 
                 if !self.no_audio {
-                    let mut audio_filters = vec![format!(
+                    let mut audio_filters = vec![];
+                    if metadata.no_audio {
+                        audio_filters
+                            .push(format!("anullsrc[{input_index}:a:{}]", input.audio_track));
+                    }
+                    audio_filters.push(format!(
                         "[{input_index}:a:{}]atrim={from}:{to}",
                         input.audio_track,
-                    )];
+                    ));
                     if self.fade > 0. {
                         audio_filters.extend_from_slice(&[
                             format!("afade=t=in:st={from}:d={}", self.fade),
