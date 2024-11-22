@@ -89,14 +89,8 @@ impl Inputs {
         for input in self.inputs.iter() {
             let metadata = get_input_metadata(input)?;
 
-            if auto_resize {
-                if let Some((resize_width, _)) = self.resize {
-                    if metadata.width > resize_width {
-                        self.resize = Some((metadata.width, metadata.height));
-                    }
-                } else {
-                    self.resize = Some((metadata.width, metadata.height));
-                }
+            if auto_resize && metadata.width > self.resize.map(|(width, _)| width).unwrap_or(0) {
+                self.resize = Some((metadata.width, metadata.height));
             }
 
             input_metadata.push(metadata);
