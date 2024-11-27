@@ -33,10 +33,10 @@ impl Inputs {
             .unwrap_or(0.);
     }
 
-    pub fn set_resize(&mut self, scale: String) -> Result<()> {
-        let split = scale
+    pub fn set_resize(&mut self, resolution: String) -> Result<()> {
+        let split = resolution
             .split_once([':', 'x'])
-            .context(format!("Invalid resize resolution: {scale}"))?;
+            .context(format!("Invalid resize resolution: {resolution}"))?;
 
         let (mut width, mut height) = (
             split
@@ -84,16 +84,25 @@ impl Inputs {
         }
 
         let mut input_metadata = vec![];
-        let auto_resize = self.resize.is_none();
+        let (mut resize_width, mut resize_height) = self.resize.unwrap_or((0, 0));
 
         for input in self.inputs.iter() {
             let metadata = get_input_metadata(input)?;
 
-            if auto_resize && metadata.width > self.resize.map(|(width, _)| width).unwrap_or(0) {
-                self.resize = Some((metadata.width, metadata.height));
+            if let Some((width, height)) = metadata.resolution {
+                if self.resize.is_none() && width > resize_width {
+                    resize_width = width;
+                    resize_height = height;
+                }
             }
 
             input_metadata.push(metadata);
+        }
+
+        // Set the default resize width if none of the inputs had a video stream
+        if resize_width == 0 || resize_height == 0 {
+            resize_width = 1920;
+            resize_height = 1080;
         }
 
         let mut args = vec![];
@@ -101,11 +110,17 @@ impl Inputs {
         let mut segment_count = 0;
 
         for (input_index, input) in self.inputs.iter().enumerate() {
-            let metadata = &input_metadata[input_index];
-
             args.append(&mut string_vec!["-i", input.file]);
 
+            let metadata = &input_metadata[input_index];
             let video_label = format!("{input_index}:v:{}", input.video_track);
+
+            if !self.no_video && metadata.resolution.is_none() {
+                filters.push(format!(
+                    "color=c=black:s={resize_width}x{resize_height}[{video_label}]",
+                ));
+            }
+
             let label_subtitled_video = input.subtitle_track.as_ref().map(|subtitle_track| {
                 let label = format!("{video_label}:si={subtitle_track}");
                 filters.push(format!(
@@ -135,8 +150,8 @@ impl Inputs {
                             format!("fade=t=out:st={fade_to}:d={}", self.fade),
                         ]);
                     }
-                    if let Some((resize_width, resize_height)) = self.resize {
-                        if resize_width != metadata.width || resize_height != metadata.height {
+                    if let Some((width, height)) = metadata.resolution {
+                        if width != resize_width || height != resize_height {
                             video_filters.extend_from_slice(&[
                                 format!("scale={resize_width}:{resize_height}:force_original_aspect_ratio=decrease"),
                                 format!("pad={resize_width}:{resize_height}:-1:-1,setsar=1"),

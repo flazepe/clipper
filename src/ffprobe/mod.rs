@@ -1,13 +1,12 @@
 use crate::ffmpeg::Input;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{from_str, Value};
 use std::process::{Command, Stdio};
 
 #[derive(Debug)]
 pub struct InputMetadata {
-    pub width: u64,
-    pub height: u64,
+    pub resolution: Option<(u64, u64)>,
     pub no_audio: bool,
 }
 
@@ -23,43 +22,35 @@ struct InputVideoStream {
 }
 
 pub fn get_input_metadata(input: &Input) -> Result<InputMetadata> {
-    let video_metadata = run_ffprobe::<InputStreams<InputVideoStream>>(
+    let mut video_streams = ffprobe::<InputStreams<InputVideoStream>>(
         &input.file,
-        &format!("v:{}", input.video_track),
-        "stream=width,height",
+        &format!("V:{}", input.video_track), // Capital V to ignore covers
+        "stream=width,height,sample_aspect_ratio,display_aspect_ratio",
     )?;
 
-    let (mut width, mut height) = video_metadata
-        .streams
-        .first()
-        .map(|stream: &InputVideoStream| (stream.width, stream.height))
-        .context(format!(
-            r#"Input "{}" has no video track {}."#,
-            input.file, input.video_track,
-        ))?;
-
-    if width % 2 != 0 {
-        width -= 1;
-    }
-
-    if height % 2 != 0 {
-        height -= 1;
-    }
-
-    let audio_metadata = run_ffprobe::<InputStreams<Value>>(
+    let audio_streams = ffprobe::<InputStreams<Value>>(
         &input.file,
         &format!("a:{}", input.audio_track),
         "stream=index",
     )?;
 
     Ok(InputMetadata {
-        width,
-        height,
-        no_audio: audio_metadata.streams.is_empty(),
+        resolution: video_streams.streams.first_mut().map(|stream| {
+            if stream.width % 2 != 0 {
+                stream.width -= 1;
+            }
+
+            if stream.height % 2 != 0 {
+                stream.height -= 1;
+            }
+
+            (stream.width, stream.height)
+        }),
+        no_audio: audio_streams.streams.is_empty(),
     })
 }
 
-pub fn run_ffprobe<T: DeserializeOwned>(file: &str, stream: &str, entries: &str) -> Result<T> {
+pub fn ffprobe<T: DeserializeOwned>(file: &str, stream: &str, entries: &str) -> Result<T> {
     let output = Command::new("ffprobe")
         .args([
             "-i",
