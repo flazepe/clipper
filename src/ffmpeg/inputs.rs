@@ -110,24 +110,22 @@ impl Inputs {
         let mut segment_count = 0;
 
         for (input_index, input) in self.entries.iter().enumerate() {
-            args.append(&mut string_vec!["-i", input.file]);
+            for (from, to) in &input.segments {
+                args.append(&mut string_vec!["-i", input.file]);
 
-            let video_label = format!("{input_index}:v:{}", input.video_track);
-            let label_subtitled_video = input.subtitle_track.as_ref().map(|subtitle_track| {
-                let label = format!("{video_label}:si={subtitle_track}");
+                let mut video_label = format!("{segment_count}:v:{}", input.video_track);
 
-                filters.push(format!(
-                    "[{video_label}]subtitles={}:si={subtitle_track}[{label}];[{label}]split={}{}",
-                    escape_ffmpeg_chars(&input.file),
-                    input.segments.len(),
-                    (0..input.segments.len())
-                        .fold("".into(), |acc, cur| format!("{acc}[{label}:{cur}]")),
-                ));
+                if let Some(subtitle_track) = input.subtitle_track {
+                    let new_video_label = format!("{video_label}:si={subtitle_track}");
 
-                move |segment_index| format!("{label}:{segment_index}")
-            });
+                    filters.push(format!(
+                        "[{video_label}]subtitles={}:si={subtitle_track}[{new_video_label}]",
+                        escape_ffmpeg_chars(&input.file),
+                    ));
 
-            for (segment_index, (from, to)) in input.segments.iter().enumerate() {
+                    video_label = new_video_label;
+                }
+
                 let metadata = &input_metadata[input_index];
                 let fade = self.fade * input.speed;
                 let fade_to = to - fade - 0.5;
@@ -139,12 +137,7 @@ impl Inputs {
                         ));
                     }
 
-                    let mut video_filters = vec![format!(
-                        "[{}]trim={from}:{to}",
-                        label_subtitled_video
-                            .as_ref()
-                            .map_or_else(|| video_label.clone(), |func| func(segment_index)),
-                    )];
+                    let mut video_filters = vec![format!("[{video_label}]trim={from}:{to}")];
 
                     if self.fade > 0. {
                         video_filters.extend_from_slice(&[
@@ -169,13 +162,13 @@ impl Inputs {
 
                 if !self.no_audio {
                     if metadata.no_audio {
-                        filters.push(format!("anullsrc[{input_index}:a:{}]", input.audio_track));
+                        filters.push(format!("anullsrc[{segment_count}:a:{}]", input.audio_track));
                     }
 
                     let mut audio_filters = vec![];
 
                     audio_filters.push(format!(
-                        "[{input_index}:a:{}]atrim={from}:{to}",
+                        "[{segment_count}:a:{}]atrim={from}:{to}",
                         input.audio_track,
                     ));
 
