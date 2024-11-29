@@ -26,16 +26,12 @@ impl Encoder {
     }
 
     pub fn set_crf(&mut self, crf: String) -> Result<()> {
-        if self.nvenc {
-            bail!("CRF is only available for CPU encoder.");
-        }
-
         let crf = crf
             .parse::<f64>()
             .context(format!("Invalid CRF value: {crf}"))?;
 
         if crf > 51. {
-            bail!("CRF value should be between 0 and 51. Received: {crf}");
+            bail!("CRF value must be between 0 and 51. Received: {crf}");
         }
 
         self.crf = Some(crf);
@@ -44,16 +40,12 @@ impl Encoder {
     }
 
     pub fn set_cq(&mut self, cq: String) -> Result<()> {
-        if !self.nvenc {
-            bail!("CQ is only available for NVENC encoder.");
-        }
-
         let cq = cq
             .parse::<f64>()
             .context(format!("Invalid CQ value: {cq}"))?;
 
         if cq > 51. {
-            bail!("CQ value should be between 0 and 51. Received: {cq}");
+            bail!("CQ value must be between 0 and 51. Received: {cq}");
         }
 
         self.cq = Some(cq);
