@@ -114,6 +114,7 @@ impl Inputs {
                 args.append(&mut string_vec!["-i", input.file]);
 
                 let mut video_label = format!("{segment_count}:v:{}", input.video_track);
+                let audio_label = format!("{segment_count}:a:{}", input.audio_track);
 
                 if let Some(subtitle_track) = input.subtitle_track {
                     let new_video_label = format!("{video_label}:si={subtitle_track}");
@@ -162,15 +163,10 @@ impl Inputs {
 
                 if !self.no_audio {
                     if metadata.no_audio {
-                        filters.push(format!("anullsrc[{segment_count}:a:{}]", input.audio_track));
+                        filters.push(format!("anullsrc[{audio_label}]"));
                     }
 
-                    let mut audio_filters = vec![];
-
-                    audio_filters.push(format!(
-                        "[{segment_count}:a:{}]atrim={from}:{to}",
-                        input.audio_track,
-                    ));
+                    let mut audio_filters = vec![format!("[{audio_label}]atrim={from}:{to}")];
 
                     if self.fade > 0. {
                         audio_filters.extend_from_slice(&[

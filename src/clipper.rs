@@ -17,8 +17,6 @@ pub struct Clipper {
 impl Clipper {
     pub fn from_env_args() -> Result<Self> {
         let mut clipper = Self::default();
-
-        // The current option for parsing args
         let mut current_option = None::<String>;
 
         for arg in args().skip(1) {
@@ -102,9 +100,11 @@ impl Clipper {
 
     pub fn try_into_vec(self) -> Result<Vec<String>> {
         let mut args = vec![];
+
         args.extend(self.inputs.try_into_vec()?);
         args.extend(self.encoder.try_into_vec()?);
         args.extend(self.output.try_into_vec()?);
+
         Ok(args)
     }
 
@@ -116,6 +116,7 @@ impl Clipper {
                 if cur.contains(' ') {
                     cur = format!(r#""{cur}""#);
                 }
+
                 format!("{acc} {cur}")
             }))
     }
@@ -162,7 +163,7 @@ Options:
 -force-not-overwrite, -n       Force ffmpeg to not overwrite the output file without confirmation
 -dry-run, -d                   Output the ffmpeg command instead of directly running ffmpeg
 -help, -h                      Print help
--version, -v                   Print version"#
+-version, -v                   Print version"#,
         );
 
         exit(0);

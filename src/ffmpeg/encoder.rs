@@ -30,10 +30,15 @@ impl Encoder {
             bail!("CRF is only available for CPU encoder.");
         }
 
-        self.crf = Some(
-            crf.parse::<f64>()
-                .context(format!("Invalid CRF value: {crf}"))?,
-        );
+        let crf = crf
+            .parse::<f64>()
+            .context(format!("Invalid CRF value: {crf}"))?;
+
+        if crf > 51. {
+            bail!("CRF value should be between 0 and 51. Received: {crf}");
+        }
+
+        self.crf = Some(crf);
 
         Ok(())
     }
@@ -43,10 +48,15 @@ impl Encoder {
             bail!("CQ is only available for NVENC encoder.");
         }
 
-        self.cq = Some(
-            cq.parse::<f64>()
-                .context(format!("Invalid CQ value: {cq}"))?,
-        );
+        let cq = cq
+            .parse::<f64>()
+            .context(format!("Invalid CQ value: {cq}"))?;
+
+        if cq > 51. {
+            bail!("CQ value should be between 0 and 51. Received: {cq}");
+        }
+
+        self.cq = Some(cq);
 
         Ok(())
     }
